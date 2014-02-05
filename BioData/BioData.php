@@ -229,5 +229,19 @@ class Sleep extends GenericMeasurement
 */
 class Location extends GenericMeasurement
 {
+    public $allowedUnits = array(
+        "DD" // Decimal Degrees
+    );
     
+    /**
+    * Measurement's value must be an array of longitude and latitude in decimal degrees
+    */
+    public function valueTest(Measurement $measurement){
+        $val = $measurement->getValue();
+        if(!isArray($val)){
+            throw new Exception("Value for " . get_class($this) . " must be an array: Array(latitude, longitude).");
+        } else if(floatval($val[0]) != $val[0] || floatval($val[1]) != $val[1]) {
+            throw new Exception("Values for  " . get_class($this) . " must be in decimal degrees, e.g: Array(-23.000, 42.123).");
+        }
+    }
 }
