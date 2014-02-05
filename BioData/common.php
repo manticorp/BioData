@@ -172,7 +172,7 @@ class Time
     * 
     * @param int|string $timestamp A timestamp (optional)
     */
-    private function checkTimeStamp($timestamp = null) {
+    public static function checkTimeStamp($timestamp = null) {
         $timestamp = ($timestamp === null)? $this->timestamp : $timestamp;
         $timestamp = intval($timestamp);
         if(!(( (int) $timestamp === $timestamp) 
@@ -191,11 +191,11 @@ class Time
     }
     
     /**
-    * Returns an array of the class properties
-    * JSON encoded.
+    * Returns the class JSON encoded
     */
     public function toJSON(){
-        return json_encode($this->toArray());
+        // return json_encode($this->toArray());
+        return json_encode($this);
     }
     
     /**
@@ -336,7 +336,8 @@ class GenericObject
     * @see Time::toJSON()
     */
     public function toJSON(){
-        return json_encode($this->toArray());
+        //return json_encode($this->toArray());
+        return json_encode($this);
     }
     
     /**
@@ -450,9 +451,12 @@ class GenericMeasurement extends GenericObject
     */
     public $allowedUnits = array();
     
-    function __construct($timestamp = null) {
+    function __construct($measurement = null, $units = null, $timestamp = null) {
         $this->measurementArray = new MeasurementArray();
         parent::__construct($timestamp);
+        if($measurement !== null){
+            return $this->addMeasurement($measurement, $units, $timestamp);
+        }
     }
     
     public function __call($name, $arguments){
@@ -477,19 +481,24 @@ class GenericMeasurement extends GenericObject
         $isAllowed = (false || ((count($this->allowedUnits) == 0) && $measurement->getUnit() === null)); // If allowed units is empty, it's a dimensionless unit, and is allowed to be null
         $isAllowed = (in_array($measurement->getUnit(), $this->allowedUnits) || $isAllowed); // changes to true if units are in allowedUnits
         if($isAllowed === false){
-            if($measurement->getUnit() === null){
-                throw new Exception("Unit type not specified", 701);
+            $unitsAllowed = "Allowed units (case sensitive): "; 
+            foreach($this->allowedUnits as $unit){
+                $unitsAllowed .= "'" . $unit . "', ";
             }
-            throw new Exception("Unit type not allowed", 700);
+            if($measurement->getUnit() === null){
+                throw new Exception("Unit type not specified. $unitsAllowed", 701);
+            }
+            throw new Exception("Unit type not allowed. $unitsAllowed", 700);
         }
         return true;
     }
     
-    public function addMeasurement($measurement, $units = null){
+    public function addMeasurement($measurement, $units = null, $timestamp = null){
         if(!(is_object($measurement) && get_class($measurement) === "BioData\Measurement")){
-            $measurement = new Measurement($measurement, $units);
+            $measurement = new Measurement($measurement, $units, $timestamp);
         }
         $this->checkMeasurementUnit($measurement);
         $this->measurementArray->addMeasurement($measurement);
+        return $this;
     }
 }

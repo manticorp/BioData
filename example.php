@@ -1,9 +1,8 @@
 <?php
 include 'BioData\BioData.php';
 
-$var = new BioData\HeartRate();
-$var->addHeartRate(123, "bpm");
+$var = new BioData\DateOfBirth(-1);
 
 echo "<pre>";
-print_r($var->toArray());
+print_r(json_decode(json_encode($var)));
 echo "</pre>";
