@@ -18,10 +18,6 @@ include 'common.php';
     public $title;
     public $description;
     
-    function __construct() {
-        call_user_func_array("parent::__construct", func_get_args());
-    }
-    
     public function toJSON(){
         $tempArray;
         foreach($this as $var => $value){
@@ -44,10 +40,6 @@ class HeartRate extends GenericMeasurement
         "bpm", // beats per minute
         "b/m"  // beats per minute (alternative form)
     );
-    
-    function __construct() {
-        call_user_func_array("parent::__construct", func_get_args());
-    }
 }
 
 /**
@@ -59,10 +51,6 @@ class BloodSugar extends GenericMeasurement
         "mmol/L", // millimols per litre
         "mg/dL"   // milligrams per decilitre
     );
-    
-    function __construct() {
-        call_user_func_array("parent::__construct", func_get_args());
-    }
 }
 
 /**
@@ -75,10 +63,6 @@ class BloodInsulin extends GenericMeasurement
         "uIU/mL",  // millimols per litre
         "pmol/L"   // milligrams per decilitre
     );
-    
-    function __construct() {
-        call_user_func_array("parent::__construct", func_get_args());
-    }
 }
 
 /**
@@ -89,10 +73,6 @@ class BloodDiastolic extends GenericMeasurement
     public $allowedUnits = array(
         "mmHg" // mm of mercury
     );
-    
-    function __construct() {
-        call_user_func_array("parent::__construct", func_get_args());
-    }
 }
 
 /**
@@ -103,21 +83,40 @@ class BloodSystolic extends GenericMeasurement
     public $allowedUnits = array(
         "mmHg" // mm of mercury
     );
-    
-    function __construct() {
-        call_user_func_array("parent::__construct", func_get_args());
-    }
 }
 
 /**
 *
 */
-class BloodType extends GenericMeasurement
+class ABOBloodType extends GenericMeasurement
 {
-    
-    function __construct() {
-        call_user_func_array("parent::__construct", func_get_args());
-    }
+    public $allowedValues = array(
+        "O+",
+        "A+",
+        "B+",
+        "AB+",
+        "O-",
+        "A-",
+        "B-",
+        "AB-"
+    );
+}
+
+/**
+* @TODO Not sure at all if this is correct
+*/
+class RHBloodType extends GenericMeasurement
+{
+    public $allowedValues = array(
+        "DCe",
+        "DcE",
+        "Dce",
+        "DCE",
+        "dCe",
+        "dcE",
+        "dCE",
+        "dce"
+    );
 }
 
 /**
@@ -125,15 +124,110 @@ class BloodType extends GenericMeasurement
 */
 class DateOfBirth extends GenericMeasurement
 {
-    public function checkMeasurementUnit(Measurement $measurement){
-        try{
-            Time::checkTimeStamp($measurement->getValue());
-        } catch(Exception $e){
-            throw new Exception("Date of Birth must be a timestamp");
+    public function valueTest(Measurement $measurement){
+        if(!($measurement->getValue() instanceof \DateTime)){
+            throw new Exception("Date of birth must be of type DateTime. Note, only the date will be taken.");
         }
     }    
+}
+
+/**
+*
+*/
+class Height extends GenericMeasurement
+{
+    public $allowedUnits = array(
+        "m", // metres
+        "ft", // feet
+        "in" // inches
+    ); 
     
-    function __construct() {
-        call_user_func_array("parent::__construct", func_get_args());
+    public function valueTest(Measurement $measurement){
+        if($measurement->getValue() < 0){
+            throw new Exception("Value for " . get_class($this) . " cannot be negative.");
+        }
     }
+}
+
+/**
+*
+*/
+class Weight extends GenericMeasurement
+{
+    public $allowedUnits = array(
+        "kg", // kilograms
+        "st", // stone
+        "lbs" // pounds
+    ); 
+    
+    public function valueTest(Measurement $measurement){
+        if($measurement->getValue() < 0){
+            throw new Exception("Value for " . get_class($this) . " cannot be negative.");
+        }
+    }
+}
+
+/**
+*
+*/
+class Mood extends GenericMeasurement
+{
+    public $allowedUnits = array(
+        "%",       // percent, from 0 to 1
+        "percent"  // percent alt
+    ); 
+    
+    public function valueTest(Measurement $measurement){
+        if($measurement->getValue() > 1 || $measurement->getValue() < 0){
+            throw new Exception("Value for " . get_class($this) . " can only be between 0 and 1.");
+        }
+    }
+}
+
+/**
+*
+*/
+class Happiness extends Mood
+{    
+}
+
+/**
+*
+*/
+class Arousal extends Mood
+{
+}
+
+/**
+*
+*/
+class Tiredness extends Mood
+{
+}
+
+/**
+*
+*/
+class Sleep extends GenericMeasurement
+{
+    public $valueCanBeNull = true;
+
+    public $allowedUnits = array(
+        "%",       // percent, from 0 to 1
+        "percent"  // percent alt
+    );
+    
+    public function valueTest(Measurement $measurement){
+        if($measurement->getValue() > 1 || $measurement->getValue() < 0){
+            throw new Exception("Value for " . get_class($this) . " can only be between 0 and 1.");
+        }
+    }
+}
+
+/**
+*
+*/
+class Location extends GenericMeasurement
+{
+    
 }

@@ -33,7 +33,7 @@ class Exception extends \Exception
 
     // custom string representation of object
     public function __toString() {
-        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
+        return PHP_EOL . PHP_EOL . __CLASS__ . ": [{$this->code}]: {$this->message}" . PHP_EOL;
     }
 }
 
@@ -52,7 +52,7 @@ class Exception extends \Exception
 * will generally have a start and finish time as well
 * as a time the biodata was actually created:
 *
-* Time Biodata Created: $timestamp
+* Time Biodata Created: $time
 * Time Went To Sleep:   $start
 * Time Woke Up:         $finish
 *
@@ -73,7 +73,7 @@ class Time
     *
     * @var string
     */
-    public $timestamp;
+    public $created;
     
     /**
     * A timestamp of when the biodata was
@@ -97,12 +97,14 @@ class Time
     * Constructor function, sets the timestamp
     * if none given and sets the type.
     *
-    * @param string $timestamp The timestamp of when the data was created (optional)
+    * @param DateTime $start    The timestamp of when the data was started
+    * @param DateTime $finished The timestamp of when the data was finished (optional)
     */
-    public function __construct($timestamp = null) {
-        $timestamp = ($timestamp === null)? $this->getCurrentTimestamp() : $timestamp;
-        $this->type = get_class($this);
-        $this->__set("timestamp", $timestamp);
+    public function __construct(\DateTime $start = null, \DateTime $finish = null) {
+        $this->start    = $start;
+        $this->finish   = $finish;
+        $this->created  = new \DateTime();
+        $this->type     = get_class($this);
     }
     
     /**
@@ -128,7 +130,6 @@ class Time
     */
     public function __set($property, $value) {
         if (property_exists($this, $property)) {
-            $this->checkTimeStamp($value); // checks that it's a valid timestamp
             $this->$property = $value;
         } else {
             throw new Exception("Undefined variable: " + $property);
@@ -168,26 +169,31 @@ class Time
     }
     
     /**
+    * Checks if $datetime is \DateTime object
+    * 
+    * @param int|string $datetime A timestamp (optional)
+    */
+    public static function checkDatetime($datetime) {
+        return ($datetime instanceof \DateTime);
+    }
+    
+    /**
     * Checks if $timestamp is a valid timestamp
     * 
     * @param int|string $timestamp A timestamp (optional)
     */
-    public static function checkTimeStamp($timestamp = null) {
-        $timestamp = ($timestamp === null)? $this->timestamp : $timestamp;
+    public static function checkTimeStamp($timestamp) {
         $timestamp = intval($timestamp);
-        if(!(( (int) $timestamp === $timestamp) 
+        return (!(( (int) $timestamp === $timestamp) 
         && ($timestamp <= PHP_INT_MAX)
-        && ($timestamp >= ~PHP_INT_MAX))){
-            throw new Exception("Invalid Timestamp.", 621);
-        } 
+        && ($timestamp >= ~PHP_INT_MAX)));
     }
     
     /**
     * Returns the current timestamp.
     */
-    public static function getCurrentTimestamp(){
-        $date = new \DateTime();
-        return $date->getTimestamp();
+    public static function getCurrentDateTime(){
+        return new \DateTime();
     }
     
     /**
@@ -237,11 +243,10 @@ class GenericObject
     public $type;
     public $time;
     
-    public function __construct($timestamp = null) {
-        $this->setTime(new Time($timestamp));
+    public function __construct(\DateTime $start = null, \DateTime $finish = null) {
+        $this->setTime(new Time($start, $finish));
         $this->type = get_class($this);
     }
-    
     
     /**
     * Magic get method.
@@ -368,8 +373,9 @@ class Measurement extends GenericObject
     public $value;
     public $unit;
 
-    function __construct($value = null, $unit = null, $timestamp = null) {
-        parent::__construct($timestamp);
+    function __construct($value = null, $unit = null, \DateTime $start = null, \DateTime $finish = null) {
+        if($start === null) $start = new \DateTime();
+        parent::__construct($start, $finish);
         $this->setValue($value);
         $this->setUnit($unit);
     }
@@ -387,10 +393,6 @@ class Measurement extends GenericObject
 class MeasurementArray extends GenericObject
 {
     public $measurements = array();
-    
-    function __construct($timestamp = null) {
-        parent::__construct($timestamp);
-    }
     
     /**
     * Checks that all the measurements are the right
@@ -417,9 +419,9 @@ class MeasurementArray extends GenericObject
     * Checks the measurement, then adds it to
     * the array of measurements.
     */
-    public function addMeasurement($measurement){
-        $this->checkMeasurement($measurement);
+    public function addMeasurement(Measurement $measurement){
         $this->measurements[] = $measurement;
+        return $measurement;
     }
     
     public function toArray(){
@@ -451,11 +453,21 @@ class GenericMeasurement extends GenericObject
     */
     public $allowedUnits = array();
     
-    function __construct($measurement = null, $units = null, $timestamp = null) {
+    /**
+    * @var array An array of values that the biodata may be measured in.
+    */
+    public $allowedValues = array();
+    
+    /**
+    * @var array Whether the value can be null
+    */
+    public $valueCanBeNull = false;
+    
+    function __construct($measurement = null, $units = null, \DateTime $start = null, \DateTime $finish = null) {
         $this->measurementArray = new MeasurementArray();
-        parent::__construct($timestamp);
-        if($measurement !== null){
-            return $this->addMeasurement($measurement, $units, $timestamp);
+        parent::__construct($start, $finish);
+        if($measurement !== null || ($this->valueCanBeNull && ($start !== null || $finish !== null)) ){
+            return $this->addMeasurement($measurement, $units, $start, $finish);
         }
     }
     
@@ -478,6 +490,7 @@ class GenericMeasurement extends GenericObject
     * @param BioData\Measurement the measurement to be checked.
     */
     public function checkMeasurementUnit(Measurement $measurement){
+        if($measurement->getValue() === null && $this->valueCanBeNull) return true;
         $isAllowed = (false || ((count($this->allowedUnits) == 0) && $measurement->getUnit() === null)); // If allowed units is empty, it's a dimensionless unit, and is allowed to be null
         $isAllowed = (in_array($measurement->getUnit(), $this->allowedUnits) || $isAllowed); // changes to true if units are in allowedUnits
         if($isAllowed === false){
@@ -493,12 +506,30 @@ class GenericMeasurement extends GenericObject
         return true;
     }
     
-    public function addMeasurement($measurement, $units = null, $timestamp = null){
-        if(!(is_object($measurement) && get_class($measurement) === "BioData\Measurement")){
-            $measurement = new Measurement($measurement, $units, $timestamp);
+    
+    public function valueTest(Measurement $measurement){
+       return true;
+    }
+    
+    public function checkMeasurementValue(Measurement $measurement){
+        if($measurement->getValue() === null && !$this->valueCanBeNull){
+            throw new Exception("No value given, value must not be null");
         }
+        if(count($this->allowedValues) !== 0 && !in_array($measurement->getValue(), $this->allowedValues)){
+            $valuesAllowed = "Allowed values (case sensitive): "; 
+            foreach($this->allowedValues as $value){
+                $valuessAllowed .= "'" . $value . "', ";
+            }
+            throw new Exception("Value not allowed. $valuesAllowed");
+        }
+        $this->valueTest($measurement);
+        return true;
+    }
+    
+    public function addMeasurement($measurement = null, $units = null, \DateTime $start = null, \DateTime $finish = null){
+        $measurement = new Measurement($measurement, $units, $start, $finish);
+        $this->checkMeasurementValue($measurement);
         $this->checkMeasurementUnit($measurement);
-        $this->measurementArray->addMeasurement($measurement);
-        return $this;
+        return $this->measurementArray->addMeasurement($measurement);
     }
 }
