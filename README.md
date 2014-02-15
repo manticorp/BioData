@@ -5,6 +5,18 @@ A universal data format for all Biometric Data in all common formats (JSON, XML,
 
 At the moment this repository consists of a set of PHP classes for creating BioData objects. Full documentation will be provided at version 0.1.
 
+## Example Usage
+
+    <?php
+    include 'BioData\BioData.php';
+    
+    // BioData\Sleep($measurement = null, $units = null, $start = null, $finish = null);
+    // In this case, create a piece of sleep biodata that records the length of sleep.
+    // The measurement is null, but could be used to record quality of sleep in %.
+    $var = new BioData\Sleep(null, null, new DateTime("Yesterday 8pm"), new DateTime("Today 8am"));
+    
+    ?>
+
 ## BioData Types (units){allowed values} [info]
 
 * Heart Rate (bpm, b/m)
