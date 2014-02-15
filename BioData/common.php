@@ -55,9 +55,6 @@ class Exception extends \Exception
 * Time Biodata Created: $time
 * Time Went To Sleep:   $start
 * Time Woke Up:         $finish
-*
-* @abstract
-*  
 */
 class Time
 {
@@ -238,7 +235,7 @@ class Time
 *
 * @abstract
 */
-class GenericObject
+abstract class GenericObject
 {
     public $type;
     public $time;
@@ -365,8 +362,6 @@ class GenericObject
 * A generic measurement object for all biodata.
 *
 * All measurements need a value, the units can be null.
-*
-* @abstract
 */
 class Measurement extends GenericObject
 {
@@ -441,7 +436,7 @@ class MeasurementArray extends GenericObject
 * 
 * @abstract
 */
-class GenericMeasurement extends GenericObject
+abstract class GenericMeasurement extends GenericObject
 {
     /**
     * @var BioData\MeasurementArray
